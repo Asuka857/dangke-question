@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>党课题库练习页</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero__badge">本地静态练习页</div>
+        <h1>党课题库练习中心</h1>
+        <p class="hero__text">
+          基于整理后的全新题库构建，支持题型筛选、关键词检索、顺序练习、随机练习、错题标记和进度记录。
+        </p>
+        <div class="hero__stats" id="hero-stats"></div>
+      </header>
+
+      <main class="layout">
+        <aside class="panel controls">
+          <div class="panel__title">练习控制</div>
+          <label class="field">
+            <span>题型筛选</span>
+            <select id="type-filter">
+              <option value="全部">全部题型</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>关键词检索</span>
+            <input id="search-input" type="search" placeholder="输入关键词检索题干或选项" />
+          </label>
+
+          <label class="field">
+            <span>跳转题目</span>
+            <input id="jump-input" type="text" placeholder="输入当前序号或题目ID，如 25 / Q00025" />
+          </label>
+
+          <div class="button-row">
+            <button id="jump-button" class="button">跳转到该题</button>
+          </div>
+
+          <div id="jump-status" class="jump-status">可按当前结果序号跳转，也可直接输入题目 ID。</div>
+
+          <label class="field">
+            <span>数据加载</span>
+            <input id="json-upload" type="file" accept=".json,application/json" />
+          </label>
+
+          <div class="button-row">
+            <button id="mode-sequential" class="button button--solid">顺序练习</button>
+            <button id="mode-random" class="button">随机练习</button>
+          </div>
+
+          <div class="button-row">
+            <button id="toggle-wrong" class="button button--danger">错题标记</button>
+          </div>
+
+          <div class="button-row">
+            <button id="toggle-wrong-review" class="button">错题复习</button>
+            <button id="clear-wrong-set" class="button">清空错题</button>
+          </div>
+
+          <div class="record-box">
+            <div class="record-box__title">本地记录</div>
+            <div id="record-status" class="record-box__text">正在检查本地记录…</div>
+            <div class="button-row">
+              <button id="export-record" class="button">导出记录</button>
+              <button id="import-record-trigger" class="button">导入记录</button>
+            </div>
+            <input id="import-record" type="file" accept=".json,application/json" class="hidden-input" />
+          </div>
+
+          <div class="hint">
+            若浏览器阻止直接读取本地 <code>questions.json</code>，可手动选择当前目录下的该文件完成加载。
+          </div>
+        </aside>
+
+        <section class="panel practice">
+          <div class="practice__topline">
+            <div id="result-count" class="chip">题目载入中</div>
+            <div id="question-position" class="chip chip--ghost">0 / 0</div>
+          </div>
+
+          <div class="progress-wrap">
+            <div id="progress-label">进度 0%</div>
+            <div class="progress-bar">
+              <div id="progress-fill"></div>
+            </div>
+          </div>
+
+          <article id="question-card" class="question-card">
+            <div id="question-meta" class="question-meta"></div>
+            <h2 id="question-stem">正在加载题库数据…</h2>
+            <div id="option-list" class="option-list"></div>
+            <div id="option-actions" class="option-actions hidden">
+              <button id="submit-answer" class="button button--solid">提交答案</button>
+              <button id="reset-selection" class="button">重置选择</button>
+            </div>
+            <div class="question-nav">
+              <button id="prev-question" class="button question-nav__button">上一题</button>
+              <button id="toggle-answer" class="button button--solid question-nav__button question-nav__answer">
+                显示答案
+              </button>
+              <button id="next-question" class="button question-nav__button">下一题</button>
+            </div>
+            <div id="answer-box" class="answer-box hidden"></div>
+            <div id="note-box" class="note-box hidden"></div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script src="./questions.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
