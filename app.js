@@ -204,17 +204,7 @@ function getCorrectAnswerText(question) {
 }
 
 function getDisplayStem(question) {
-  if (!isFillQuestion(question) || !question.answer) {
-    return question.stem;
-  }
-  const annotation = `（答案：${question.answer}）`;
-  if (question.stem.includes("（ ）")) {
-    return question.stem.replace(/（\s*）/g, annotation);
-  }
-  if (question.stem.includes("()")) {
-    return question.stem.replace(/\(\)/g, annotation);
-  }
-  return `${question.stem} [答案：${question.answer}]`;
+  return question.stem;
 }
 
 function setAnswerFeedback(type, message) {
@@ -384,12 +374,12 @@ function renderQuestion() {
   elements.wrongButton.textContent = isWrong ? "取消错题" : "错题标记";
   elements.prevButton.disabled = state.currentIndex === 0;
   elements.nextButton.disabled = state.currentIndex >= state.filteredQuestions.length - 1;
-  if (isFillQuestion(question)) {
-    elements.answerButton.textContent = "填空答案已显示";
-    elements.answerButton.disabled = true;
-  } else if (state.answerFeedback) {
+  if (state.answerFeedback) {
     elements.answerButton.textContent = "答案已显示";
     elements.answerButton.disabled = true;
+  } else if (isFillQuestion(question)) {
+    elements.answerButton.textContent = state.showAnswer ? "隐藏填空答案" : "显示填空答案";
+    elements.answerButton.disabled = false;
   } else {
     elements.answerButton.textContent = state.showAnswer ? "隐藏答案" : "显示答案";
     elements.answerButton.disabled = false;
@@ -450,6 +440,10 @@ function renderAnswerState(question) {
   }
 
   if (isFillQuestion(question)) {
+    if (!state.showAnswer) {
+      clearAnswerFeedback();
+      return;
+    }
     const reviewText = question.reviewReason
       ? `<br /><strong>复核提示：</strong>${question.reviewReason}`
       : "";
