@@ -22,6 +22,7 @@ const elements = {
   jumpButton: document.getElementById("jump-button"),
   jumpStatus: document.getElementById("jump-status"),
   upload: document.getElementById("json-upload"),
+  incrementalStatus: document.getElementById("incremental-status"),
   recordStatus: document.getElementById("record-status"),
   exportRecord: document.getElementById("export-record"),
   importRecordTrigger: document.getElementById("import-record-trigger"),
@@ -44,11 +45,13 @@ const elements = {
   nextButton: document.getElementById("next-question"),
   answerButton: document.getElementById("toggle-answer"),
   wrongButton: document.getElementById("toggle-wrong"),
+  incrementalButton: document.getElementById("toggle-incremental-practice"),
   reviewWrongButton: document.getElementById("toggle-wrong-review"),
   clearWrongButton: document.getElementById("clear-wrong-set"),
 };
 
 state.reviewWrongOnly = false;
+state.incrementalOnly = false;
 state.restoredQuestionId = null;
 state.restoredTypeFilter = "全部";
 state.restoredSearchKeyword = "";
@@ -80,6 +83,7 @@ function buildPersistedSnapshot() {
     searchKeyword,
     randomMode: state.randomMode,
     reviewWrongOnly: state.reviewWrongOnly,
+    incrementalOnly: state.incrementalOnly,
   };
 }
 
@@ -117,6 +121,7 @@ function loadPersistedState() {
     state.wrongSet = new Set(saved.wrongIds || []);
     state.randomMode = Boolean(saved.randomMode);
     state.reviewWrongOnly = Boolean(saved.reviewWrongOnly);
+    state.incrementalOnly = Boolean(saved.incrementalOnly);
     state.restoredQuestionId = saved.currentQuestionId || null;
     state.restoredTypeFilter = saved.typeFilter || "全部";
     state.restoredSearchKeyword = saved.searchKeyword || "";
@@ -125,6 +130,7 @@ function loadPersistedState() {
     state.wrongSet = new Set();
     state.randomMode = false;
     state.reviewWrongOnly = false;
+    state.incrementalOnly = false;
     state.restoredQuestionId = null;
     state.restoredTypeFilter = "全部";
     state.restoredSearchKeyword = "";
@@ -143,6 +149,7 @@ function persistState() {
 function buildHeroStats(meta) {
   const cards = [
     { label: "题库总量", value: meta.totalQuestions || 0 },
+    { label: "新增题", value: meta.incrementalNewQuestions || 0 },
     { label: "待复核题", value: meta.conflictItems || 0 },
     { label: "题型种类", value: Object.keys(meta.typeCounts || {}).length },
     { label: "生成时间", value: (meta.generatedAt || "").slice(0, 10) || "-" },
@@ -235,6 +242,35 @@ function updateWrongReviewControls() {
   elements.clearWrongButton.disabled = wrongCount === 0;
 }
 
+function getIncrementalQuestionCount() {
+  return state.payload?.meta?.incrementalNewQuestions || 0;
+}
+
+function formatSourceCollections(question) {
+  const labels = (question.sourceCollections || []).map((name) => {
+    if (name === "existing") {
+      return "原始文件";
+    }
+    if (name === "incremental") {
+      return "新增数据";
+    }
+    return name;
+  });
+  return labels.join(" / ") || "未标注来源";
+}
+
+function updateIncrementalControls() {
+  const total = getIncrementalQuestionCount();
+  elements.incrementalButton.textContent = state.incrementalOnly
+    ? `退出新增题练习（${total}）`
+    : `新增题练习（${total}）`;
+  elements.incrementalButton.classList.toggle("is-active", state.incrementalOnly);
+  elements.incrementalButton.disabled = total === 0;
+  elements.incrementalStatus.textContent = total
+    ? `新增来源去重后共有 ${state.payload?.meta?.incrementalQuestions || 0} 题，其中实际新增入库 ${total} 题。`
+    : "当前题库未标记新增入库题。";
+}
+
 function resetInteractionState() {
   clearAutoNextTimer();
   state.selectedOptions = [];
@@ -247,6 +283,9 @@ function applyFilters({ preserveQuestionId = false } = {}) {
   if (state.reviewWrongOnly && state.wrongSet.size === 0) {
     state.reviewWrongOnly = false;
   }
+  if (state.incrementalOnly && !(state.payload?.questions || []).some((question) => question.isIncrementalAddition)) {
+    state.incrementalOnly = false;
+  }
   const typeValue = elements.typeFilter.value;
   const keyword = normalizeText(elements.searchInput.value);
   const targetQuestionId = preserveQuestionId ? state.restoredQuestionId : null;
@@ -255,10 +294,14 @@ function applyFilters({ preserveQuestionId = false } = {}) {
   state.filteredQuestions = questions.filter((question) => {
     const typeMatched = typeValue === "全部" || question.type === typeValue;
     const wrongMatched = !state.reviewWrongOnly || state.wrongSet.has(question.id);
+    const incrementalMatched = !state.incrementalOnly || question.isIncrementalAddition;
     if (!typeMatched) {
       return false;
     }
     if (!wrongMatched) {
+      return false;
+    }
+    if (!incrementalMatched) {
       return false;
     }
     if (!keyword) {
@@ -280,6 +323,7 @@ function applyFilters({ preserveQuestionId = false } = {}) {
     renderEmptyState();
     updateSummary();
     updateWrongReviewControls();
+    updateIncrementalControls();
     updateJumpStatus();
     persistState();
     return;
@@ -296,6 +340,7 @@ function applyFilters({ preserveQuestionId = false } = {}) {
   }
   updateSummary();
   updateWrongReviewControls();
+  updateIncrementalControls();
   renderQuestion();
   updateJumpStatus();
   persistState();
@@ -324,14 +369,21 @@ function renderEmptyState() {
   elements.nextButton.disabled = true;
   elements.answerButton.disabled = true;
   elements.answerButton.textContent = "显示答案";
+  updateIncrementalControls();
   updateRecordStatus();
 }
 
 function updateSummary() {
   const total = state.filteredQuestions.length;
-  elements.resultCount.textContent = state.reviewWrongOnly
-    ? `错题复习 ${total} 题`
-    : `当前结果 ${total} 题`;
+  if (state.reviewWrongOnly && state.incrementalOnly) {
+    elements.resultCount.textContent = `新增错题复习 ${total} 题`;
+  } else if (state.reviewWrongOnly) {
+    elements.resultCount.textContent = `错题复习 ${total} 题`;
+  } else if (state.incrementalOnly) {
+    elements.resultCount.textContent = `新增题练习 ${total} 题`;
+  } else {
+    elements.resultCount.textContent = `当前结果 ${total} 题`;
+  }
   elements.sequentialButton.classList.toggle("is-active", !state.randomMode);
   elements.randomButton.classList.toggle("is-active", state.randomMode);
 }
@@ -346,10 +398,18 @@ function renderQuestion() {
   const progressValue = Math.round(((state.currentIndex + 1) / state.filteredQuestions.length) * 100);
   const isWrong = state.wrongSet.has(question.id);
   const visitCount = state.progress[question.id] || 0;
+  const sourceLabel = formatSourceCollections(question);
+  const incrementalTag = question.isIncrementalAddition
+    ? "新增入库题"
+    : question.containsIncrementalSource
+      ? "含新增来源"
+      : "原始题库";
 
   elements.questionMeta.innerHTML = [
     `<div class="meta-pill">${question.id}</div>`,
     `<div class="meta-pill">${question.type}</div>`,
+    `<div class="meta-pill">${incrementalTag}</div>`,
+    `<div class="meta-pill">${sourceLabel}</div>`,
     `<div class="meta-pill">来源 ${question.sourceFiles.length} 个文件</div>`,
     `<div class="meta-pill">已查看 ${visitCount} 次</div>`,
     `<div class="meta-pill">${isWrong ? "已标记错题" : "未标记错题"}</div>`,
@@ -582,6 +642,7 @@ function jumpToQuestion() {
     }
 
     state.reviewWrongOnly = false;
+    state.incrementalOnly = false;
     elements.typeFilter.value = "全部";
     elements.searchInput.value = "";
     state.currentIndex = 0;
@@ -642,6 +703,15 @@ function attachEvents() {
 
   elements.randomButton.addEventListener("click", () => {
     state.randomMode = true;
+    state.currentIndex = 0;
+    applyFilters();
+  });
+
+  elements.incrementalButton.addEventListener("click", () => {
+    if (!getIncrementalQuestionCount()) {
+      return;
+    }
+    state.incrementalOnly = !state.incrementalOnly;
     state.currentIndex = 0;
     applyFilters();
   });
@@ -728,6 +798,7 @@ function attachEvents() {
     state.wrongSet = new Set(saved.wrongIds || []);
     state.randomMode = Boolean(saved.randomMode);
     state.reviewWrongOnly = Boolean(saved.reviewWrongOnly);
+    state.incrementalOnly = Boolean(saved.incrementalOnly);
     state.restoredQuestionId = saved.currentQuestionId || null;
     state.restoredTypeFilter = saved.typeFilter || "全部";
     state.restoredSearchKeyword = saved.searchKeyword || "";
@@ -790,6 +861,7 @@ function initWithPayload(payload) {
     : "全部";
   elements.searchInput.value = state.restoredSearchKeyword;
   updateWrongReviewControls();
+  updateIncrementalControls();
   applyFilters({ preserveQuestionId: true });
 }
 

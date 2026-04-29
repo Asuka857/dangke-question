@@ -232,6 +232,13 @@ body::before {
   background: rgba(255, 255, 255, 0.62);
 }
 
+.record-box--incremental {
+  border-color: rgba(199, 161, 75, 0.34);
+  background:
+    linear-gradient(180deg, rgba(199, 161, 75, 0.14), rgba(255, 255, 255, 0.74)),
+    rgba(255, 255, 255, 0.62);
+}
+
 .record-box__title {
   margin-bottom: 8px;
   font-size: 14px;
