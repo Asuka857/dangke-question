@@ -33,6 +33,7 @@ const elements = {
   progressFill: document.getElementById("progress-fill"),
   questionMeta: document.getElementById("question-meta"),
   questionStem: document.getElementById("question-stem"),
+  fillWrongButton: document.getElementById("fill-wrong-button"),
   optionList: document.getElementById("option-list"),
   optionActions: document.getElementById("option-actions"),
   submitAnswer: document.getElementById("submit-answer"),
@@ -271,6 +272,26 @@ function updateIncrementalControls() {
     : "当前题库未标记新增入库题。";
 }
 
+function toggleCurrentWrongQuestion() {
+  const question = state.filteredQuestions[state.currentIndex];
+  if (!question) {
+    return;
+  }
+  if (state.wrongSet.has(question.id)) {
+    state.wrongSet.delete(question.id);
+  } else {
+    state.wrongSet.add(question.id);
+  }
+  persistState();
+  if (state.reviewWrongOnly) {
+    state.currentIndex = 0;
+    applyFilters();
+    return;
+  }
+  updateWrongReviewControls();
+  renderQuestion();
+}
+
 function resetInteractionState() {
   clearAutoNextTimer();
   state.selectedOptions = [];
@@ -362,6 +383,7 @@ function renderEmptyState() {
   elements.optionActions.classList.add("hidden");
   clearAnswerFeedback();
   elements.noteBox.classList.add("hidden");
+  elements.fillWrongButton.classList.add("hidden");
   elements.questionPosition.textContent = "0 / 0";
   elements.progressLabel.textContent = "进度 0%";
   elements.progressFill.style.width = "0%";
@@ -432,6 +454,12 @@ function renderQuestion() {
   elements.progressLabel.textContent = `进度 ${progressValue}%`;
   elements.progressFill.style.width = `${progressValue}%`;
   elements.wrongButton.textContent = isWrong ? "取消错题" : "错题标记";
+  if (isFillQuestion(question)) {
+    elements.fillWrongButton.classList.remove("hidden");
+    elements.fillWrongButton.textContent = isWrong ? "移出错题" : "加入错题";
+  } else {
+    elements.fillWrongButton.classList.add("hidden");
+  }
   elements.prevButton.disabled = state.currentIndex === 0;
   elements.nextButton.disabled = state.currentIndex >= state.filteredQuestions.length - 1;
   if (state.answerFeedback) {
@@ -728,23 +756,11 @@ function attachEvents() {
   });
 
   elements.wrongButton.addEventListener("click", () => {
-    const question = state.filteredQuestions[state.currentIndex];
-    if (!question) {
-      return;
-    }
-    if (state.wrongSet.has(question.id)) {
-      state.wrongSet.delete(question.id);
-    } else {
-      state.wrongSet.add(question.id);
-    }
-    persistState();
-    if (state.reviewWrongOnly) {
-      state.currentIndex = 0;
-      applyFilters();
-      return;
-    }
-    updateWrongReviewControls();
-    renderQuestion();
+    toggleCurrentWrongQuestion();
+  });
+
+  elements.fillWrongButton.addEventListener("click", () => {
+    toggleCurrentWrongQuestion();
   });
 
   elements.reviewWrongButton.addEventListener("click", () => {

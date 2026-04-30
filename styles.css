@@ -355,12 +355,26 @@ body::before {
   color: var(--muted);
 }
 
+.question-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
 #question-stem {
-  margin: 0 0 18px;
+  margin: 0;
   font-family: "STZhongsong", "Noto Serif SC", serif;
   font-size: clamp(24px, 2.5vw, 34px);
   line-height: 1.5;
   color: #1f232c;
+  flex: 1 1 auto;
+}
+
+.question-flag {
+  flex: 0 0 auto;
+  min-width: 110px;
 }
 
 .option-list {
@@ -576,6 +590,16 @@ body::before {
   #question-stem {
     font-size: clamp(20px, 6vw, 26px);
     line-height: 1.6;
+  }
+
+  .question-heading {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .question-flag {
+    width: 100%;
   }
 
   .option-item {
